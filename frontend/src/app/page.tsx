@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Input, Button, Typography, Card, Space, Row, Col, message, Modal } from 'antd';
 import { SearchOutlined, SafetyCertificateOutlined, RocketOutlined, WalletOutlined } from '@ant-design/icons';
 import { traceFlight, getContractAddress, fetchFlightData, getFlightEventsFromChain, prepareTransaction, confirmTransaction } from '@/services/api';
 import api from '@/services/api';
 import { isMetaMaskInstalled, connectMetaMask, sendPreparedTransaction } from '@/services/web3';
 import BlockchainConsole from '@/components/BlockchainConsole';
+import WorldMap from '@/components/ui/world-map';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -65,10 +67,12 @@ export default function Home() {
             let hasBlockchainEvents = false;
             try {
                 // Very short timeout - if blockchain is slow, skip it
-                const chainEventsPromise = getFlightEventsFromChain(contractAddress, flightNumber.toUpperCase());
-                const timeoutPromise = new Promise<never>((_, reject) => 
-                    setTimeout(() => reject(new Error('Blockchain query timeout - skipping')), 3000)
-                );
+                const chainEventsPromise = getFlightEventsFromChain(flightNumber.toUpperCase());
+                const timeoutPromise = new Promise<never>((_, reject) => {
+                    setTimeout(() => {
+                        reject(new Error('Blockchain query timeout - skipping'));
+                    }, 3000);
+                });
                 
                 const chainEvents = await Promise.race([chainEventsPromise, timeoutPromise]);
                 if (chainEvents && chainEvents.length > 0) {
@@ -513,15 +517,49 @@ export default function Home() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: '70vh'
+            minHeight: '100%',
+            height: '100%',
+            position: 'relative',
+            overflow: 'hidden',
+            padding: '24px 48px',
+            boxSizing: 'border-box'
         }}>
-            <div style={{ maxWidth: 800, width: '100%', textAlign: 'center' }}>
+            {/* World Map Background */}
+            <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 0,
+                opacity: 0.4,
+                overflow: 'hidden'
+            }}>
+                <WorldMap dots={[]} lineColor="#1890ff" />
+            </div>
+            
+            {/* Content Layer */}
+            <div style={{ 
+                maxWidth: 800, 
+                width: '100%', 
+                textAlign: 'center',
+                position: 'relative',
+                zIndex: 1
+            }}>
                 <Space direction="vertical" size="large" style={{ width: '100%' }}>
 
-                    <div style={{ marginBottom: 40 }}>
-                        <SafetyCertificateOutlined style={{ fontSize: 64, color: '#1890ff', marginBottom: 24 }} />
-                        <Title level={1}>FlightChain</Title>
-                        <Paragraph style={{ fontSize: 18, color: '#666' }}>
+                    <div style={{ marginBottom: 12 }}>
+                        <div style={{ marginBottom: 2, display: 'flex', justifyContent: 'center' }}>
+                            <Image
+                                src="/logo.png"
+                                alt="FlightChain Logo"
+                                width={500}
+                                height={200}
+                                style={{ objectFit: 'contain' }}
+                                priority
+                            />
+                        </div>
+                        <Paragraph style={{ fontSize: 20, color: '#666', marginBottom: 0, marginTop: 0 }}>
                             The world's first blockchain-verified flight event tracking system.
                             <br />
                             Transparent, immutable, and trusted real-time flight data.
@@ -577,7 +615,7 @@ export default function Home() {
                         </Card>
                     )}
 
-                    <Row gutter={24} style={{ marginTop: 48 }}>
+                    <Row gutter={24} style={{ marginTop: 32 }}>
                         <Col span={8}>
                             <Card bordered={false}>
                                 <Title level={4}>Real-Time Tracking</Title>
