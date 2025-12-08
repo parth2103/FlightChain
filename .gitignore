@@ -9,7 +9,7 @@ __pycache__/
 *.pyd
 .Python
 
-# Environment variables
+# Environment variables (CRITICAL - contains secrets)
 .env
 .env.local
 .env.development.local
@@ -17,6 +17,9 @@ __pycache__/
 .env.production.local
 backend/.env
 backend/.env.local
+backend/.env.bak
+*.env
+*.env.*
 
 # IDE
 .vscode/
@@ -26,11 +29,13 @@ backend/.env.local
 *~
 .DS_Store
 
-# Next.js
+# Next.js build and cache
 frontend/.next/
 frontend/out/
 frontend/build/
 frontend/dist/
+.next/
+out/
 
 # Python
 *.egg-info/
@@ -41,10 +46,11 @@ build/
 .coverage
 htmlcov/
 
-# Database
+# Database files
 *.db
 *.sqlite
 *.sqlite3
+backend/*.db
 
 # Logs
 logs/
@@ -59,7 +65,7 @@ blockchain/build/
 blockchain/node_modules/
 blockchain/.env
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 
