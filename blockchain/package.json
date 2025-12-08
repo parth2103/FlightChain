@@ -1,0 +1,23 @@
+{
+    "name": "flightchain-blockchain",
+    "version": "1.0.0",
+    "description": "FlightChain smart contracts for flight event verification",
+    "scripts": {
+        "ganache": "ganache --port 8545 --networkId 5777 --deterministic",
+        "compile": "truffle compile",
+        "migrate": "truffle migrate --network development",
+        "test": "truffle test",
+        "console": "truffle console --network development"
+    },
+    "devDependencies": {
+        "ganache": "^7.9.2",
+        "truffle": "^5.11.5"
+    },
+    "keywords": [
+        "blockchain",
+        "ethereum",
+        "flight",
+        "verification"
+    ],
+    "license": "MIT"
+}
