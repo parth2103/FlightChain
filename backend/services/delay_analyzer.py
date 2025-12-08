@@ -50,9 +50,15 @@ class DelayAnalyzer:
         arrival_delay = self._calculate_arrival_delay(flight)
         
         # Determine total delay (use arrival if available, else departure)
-        total_delay = arrival_delay if arrival_delay is not None else (departure_delay or 0)
+        # For display purposes, use the maximum of departure/arrival delay (for delayed) or minimum (for early)
+        if arrival_delay is not None:
+            total_delay = arrival_delay
+        elif departure_delay is not None:
+            total_delay = departure_delay
+        else:
+            total_delay = 0
         
-        # Determine if delayed
+        # Determine if delayed (only if positive delay > threshold)
         is_delayed = total_delay > self.ON_TIME_THRESHOLD
         
         # Get events for pattern analysis
@@ -68,8 +74,8 @@ class DelayAnalyzer:
             flight_id=flight.id,
             flight_number=flight.flight_number,
             is_delayed=is_delayed,
-            total_delay_minutes=max(0, total_delay),
-            category=categorize_delay(total_delay),
+            total_delay_minutes=total_delay,  # Keep actual delay (can be negative for early)
+            category=categorize_delay(max(0, total_delay)),  # Category only for positive delays
             departure_delay_minutes=departure_delay,
             arrival_delay_minutes=arrival_delay,
             reasons=reasons,
@@ -270,6 +276,17 @@ class DelayAnalyzer:
         total_delay: float
     ) -> str:
         """Generate human-readable delay explanation."""
+        dep_delay = self._calculate_departure_delay(flight)
+        arr_delay = self._calculate_arrival_delay(flight)
+        
+        # Handle early arrivals/departures
+        if dep_delay is not None and dep_delay < 0 and arr_delay is not None and arr_delay < 0:
+            return f"Flight {flight.flight_number} departed {int(abs(dep_delay))} minutes early and arrived {int(abs(arr_delay))} minutes early."
+        elif dep_delay is not None and dep_delay < 0:
+            return f"Flight {flight.flight_number} departed {int(abs(dep_delay))} minutes early."
+        elif arr_delay is not None and arr_delay < 0:
+            return f"Flight {flight.flight_number} arrived {int(abs(arr_delay))} minutes early."
+        
         if total_delay <= 0:
             return f"Flight {flight.flight_number} departed and arrived on time."
         

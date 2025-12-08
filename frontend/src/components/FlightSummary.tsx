@@ -41,7 +41,7 @@ export default function FlightSummary({ flight }: Props) {
             {(flight as any).is_mock_data && (
                 <div style={{ marginBottom: 16, padding: 12, background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4 }}>
                     <Text type="warning">
-                        ⚠️ <strong>Demo Data:</strong> This flight is using synthetic/mock data because real-time data from OpenSky Network was not available. 
+                        ⚠️ <strong>Demo Data:</strong> This flight is using synthetic/mock data because it was not found in the CSV database. 
                         The information shown may not match actual flight details.
                     </Text>
                 </div>
@@ -68,7 +68,7 @@ export default function FlightSummary({ flight }: Props) {
                     )}
                     {(flight as any).data_source && (
                         <div style={{ marginTop: 8, fontSize: 12 }}>
-                            <Text type="secondary">Data Source: {(flight as any).data_source === 'mock' ? 'Synthetic (Demo)' : 'OpenSky Network (Real-time)'}</Text>
+                            <Text type="secondary">Data Source: {(flight as any).data_source === 'mock' ? 'Synthetic (Demo)' : 'CSV Database'}</Text>
                         </div>
                     )}
                 </Col>

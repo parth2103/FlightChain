@@ -51,12 +51,12 @@ async def search_flight(
                 message="Flight found in database"
             )
         
-        # Try to fetch from OpenSky
+        # Try to fetch from CSV database
         try:
             flight = await service.fetch_and_create_flight(flight_number.upper())
         except Exception as e:
             # Log the error but don't crash
-            print(f"Error fetching flight from OpenSky: {str(e)}")
+            print(f"Error fetching flight from CSV database: {str(e)}")
             import traceback
             traceback.print_exc()
             # Return not found instead of crashing
@@ -70,7 +70,7 @@ async def search_flight(
             return FlightSearchResponse(
                 found=True,
                 flight=service.to_response(flight),
-                message="Flight data fetched from OpenSky Network"
+                message="Flight data fetched from CSV database"
             )
         
         return FlightSearchResponse(
@@ -121,21 +121,21 @@ async def trace_flight_search(
     if found_events:
         return logs
         
-    # 2. If Not Found -> Activate Oracle / Mock Generator
+    # 2. If Not Found -> Activate Oracle / CSV Database
     logs.append({"type": "warning", "message": f"Flight {flight_number} not indexed on-chain."})
-    logs.append({"type": "info", "message": "Activating FlightChain Oracle Service..."})
+    logs.append({"type": "info", "message": "Activating FlightChain Data Service (CSV Database)..."})
     
-    # Create Flight (Service already handles mock gen)
+    # Create Flight (Service fetches from CSV or uses mock generator)
     f_service = FlightService(db)
     flight = await f_service.fetch_and_create_flight(flight_number)
     
     if not flight:
-        logs.append({"type": "error", "message": "Oracle failed to retrieve flight data."})
+        logs.append({"type": "error", "message": "Data service failed to retrieve flight data."})
         return logs
         
-    logs.append({"type": "success", "message": f"Oracle retrieved metadata for {flight.airline_name} {flight_number}."})
+    logs.append({"type": "success", "message": f"Data service retrieved metadata for {flight.airline_name} {flight_number}."})
     
-    # Generate Events
+    # Generate Events using CSV data if available
     mock_gen = MockDataGenerator()
     # Ensure we have a scheduled_departure for event generation
     if not flight.scheduled_departure:
@@ -144,7 +144,15 @@ async def trace_flight_search(
     else:
          scheduled_dep_for_events = flight.scheduled_departure
          
-    events_data = mock_gen.generate_mock_events(scheduled_dep_for_events)
+    # Use actual flight times from CSV if available
+    events_data = mock_gen.generate_mock_events(
+        scheduled_dep=scheduled_dep_for_events,
+        actual_dep=flight.actual_departure,
+        scheduled_arr=flight.scheduled_arrival,
+        actual_arr=flight.actual_arrival,
+        dep_delay_minutes=flight.departure_delay_minutes,
+        air_time_minutes=None  # Could be added to Flight model if needed
+    )
     
     assembler = EventAssembler(db)
     logs.append({"type": "info", "message": f"Assembling {len(events_data)} verified flight events..."})

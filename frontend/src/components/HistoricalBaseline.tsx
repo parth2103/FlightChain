@@ -28,24 +28,30 @@ export default function HistoricalBaselineView({ flight }: Props) {
                     <Card size="small">
                         <Statistic
                             title="On-Time Performance"
-                            value={baseline.on_time_percentage}
+                            value={baseline.on_time_percentage ?? 0}
                             precision={1}
                             suffix="%"
-                            valueStyle={{ color: getPerformanceColor(baseline.on_time_percentage) }}
+                            valueStyle={{ 
+                                color: baseline.on_time_percentage !== null && baseline.on_time_percentage !== undefined 
+                                    ? getPerformanceColor(baseline.on_time_percentage) 
+                                    : '#999'
+                            }}
                         />
-                        <Progress
-                            percent={baseline.on_time_percentage}
-                            showInfo={false}
-                            strokeColor={getPerformanceColor(baseline.on_time_percentage)}
-                            size="small"
-                        />
+                        {baseline.on_time_percentage !== null && baseline.on_time_percentage !== undefined && (
+                            <Progress
+                                percent={baseline.on_time_percentage}
+                                showInfo={false}
+                                strokeColor={getPerformanceColor(baseline.on_time_percentage)}
+                                size="small"
+                            />
+                        )}
                     </Card>
                 </Col>
                 <Col span={8}>
                     <Card size="small">
                         <Statistic
                             title="Avg Delay"
-                            value={baseline.avg_delay_minutes}
+                            value={baseline.avg_delay_minutes ?? 0}
                             precision={0}
                             suffix="min"
                         />
@@ -58,7 +64,7 @@ export default function HistoricalBaselineView({ flight }: Props) {
                     <Card size="small">
                         <Statistic
                             title="Total Flights Tracked"
-                            value={baseline.total_flights}
+                            value={baseline.total_flights ?? 0}
                         />
                         <div style={{ fontSize: 12, color: '#999', marginTop: 8 }}>
                             Sample size
@@ -71,12 +77,21 @@ export default function HistoricalBaselineView({ flight }: Props) {
                 <Row gutter={24}>
                     <Col span={12}>
                         <div style={{ textAlign: 'center' }}>
-                            <Statistic title="Avg Departure Delay" value={12} suffix="min" />
+                            <Statistic 
+                                title="Avg Departure Delay" 
+                                value={baseline.avg_departure_delay ?? 'N/A'} 
+                                suffix={baseline.avg_departure_delay !== null && baseline.avg_departure_delay !== undefined ? "min" : ""}
+                            />
                         </div>
                     </Col>
                     <Col span={12}>
                         <div style={{ textAlign: 'center' }}>
-                            <Statistic title="Avg Arrival Delay" value={baseline.avg_delay_minutes} suffix="min" />
+                            <Statistic 
+                                title="Avg Arrival Delay" 
+                                value={baseline.avg_arrival_delay ?? baseline.avg_delay_minutes ?? 'N/A'} 
+                                suffix={(baseline.avg_arrival_delay !== null && baseline.avg_arrival_delay !== undefined) || 
+                                        (baseline.avg_delay_minutes !== null && baseline.avg_delay_minutes !== undefined) ? "min" : ""}
+                            />
                         </div>
                     </Col>
                 </Row>

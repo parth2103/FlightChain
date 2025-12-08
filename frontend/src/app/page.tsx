@@ -75,7 +75,7 @@ export default function Home() {
                     addLog('success', `Found ${chainEvents.length} events on blockchain`);
                     hasBlockchainEvents = true;
                 } else {
-                    addLog('info', 'No events found on blockchain, will fetch from OpenSky');
+                    addLog('info', 'No events found on blockchain, will fetch from CSV database');
                 }
             } catch (error: any) {
                 // Silently continue - blockchain check is optional
@@ -91,8 +91,8 @@ export default function Home() {
                 return;
             }
 
-            // 5. Flight not on blockchain - fetch from OpenSky and create events
-            addLog('info', 'Flight not found on blockchain. Fetching from OpenSky Network...');
+            // 5. Flight not on blockchain - fetch from CSV database and create events
+            addLog('info', 'Flight not found on blockchain. Fetching from CSV database...');
             try {
                 const traceLogs = await traceFlight(flightNumber.toUpperCase());
                 // Ensure all logs have the required structure

@@ -65,6 +65,8 @@ export interface DelayAnalysis {
     is_delayed: boolean;
     total_delay_minutes: number;
     category: string;
+    departure_delay_minutes?: number | null;
+    arrival_delay_minutes?: number | null;
     reasons: Array<{
         type: string;
         minutes: number;
@@ -86,9 +88,14 @@ export interface BlockchainEvent {
 
 export interface HistoricalBaseline {
     route_key: string;
-    avg_delay_minutes: number;
-    on_time_percentage: number;
-    total_flights: number;
-    delay_category: string;
-    on_time_category: string;
+    airline_code?: string | null;
+    avg_delay_minutes?: number | null;
+    on_time_percentage?: number | null;
+    total_flights?: number | null;
+    avg_departure_delay?: number | null;
+    avg_arrival_delay?: number | null;
+    sample_period_start?: string | null;
+    sample_period_end?: string | null;
+    delay_category?: string | null;
+    on_time_category?: string | null;
 }

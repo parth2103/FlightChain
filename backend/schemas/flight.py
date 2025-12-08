@@ -67,8 +67,8 @@ class FlightResponse(BaseModel):
     arrival_delay_minutes: Optional[int] = None
     
     # Data source indicator
-    is_mock_data: Optional[bool] = Field(None, description="True if data is synthetic/mock, False if from OpenSky API")
-    data_source: Optional[str] = Field(None, description="Source of flight data: 'opensky' or 'mock'")
+    is_mock_data: Optional[bool] = Field(None, description="True if data is synthetic/mock, False if from CSV database")
+    data_source: Optional[str] = Field(None, description="Source of flight data: 'csv' or 'mock'")
     
     class Config:
         from_attributes = True

@@ -92,9 +92,46 @@ class MockDataGenerator:
         
         return scheduled_dep, scheduled_arr
 
-    def generate_mock_events(self, scheduled_dep: datetime) -> list[dict]:
-        """Generate a sequence of synthetic events based on schedule."""
+    def generate_mock_events(self, scheduled_dep: datetime, actual_dep: Optional[datetime] = None, 
+                            scheduled_arr: Optional[datetime] = None, actual_arr: Optional[datetime] = None,
+                            dep_delay_minutes: Optional[float] = None, air_time_minutes: Optional[float] = None) -> list[dict]:
+        """
+        Generate a sequence of synthetic events based on schedule.
+        
+        Can use actual flight data from CSV if provided for more realistic timestamps.
+        
+        Args:
+            scheduled_dep: Scheduled departure time
+            actual_dep: Actual departure time (optional, from CSV)
+            scheduled_arr: Scheduled arrival time (optional, from CSV)
+            actual_arr: Actual arrival time (optional, from CSV)
+            dep_delay_minutes: Departure delay in minutes (optional, from CSV)
+            air_time_minutes: Air time in minutes (optional, from CSV)
+        """
         events = []
+        
+        # Use actual times if available, otherwise estimate
+        if actual_dep is None:
+            # Use scheduled time with small random delay if delay data not available
+            if dep_delay_minutes is not None:
+                actual_dep = scheduled_dep + timedelta(minutes=int(dep_delay_minutes))
+            else:
+                actual_dep = scheduled_dep + timedelta(minutes=random.randint(-5, 10))
+        else:
+            actual_dep = actual_dep
+        
+        # Calculate arrival if not provided
+        if actual_arr is None and scheduled_arr:
+            if air_time_minutes is not None:
+                # Use actual air time
+                actual_arr = actual_dep + timedelta(minutes=int(air_time_minutes))
+            else:
+                # Estimate based on scheduled arrival and actual departure
+                if scheduled_arr:
+                    estimated_duration = scheduled_arr - scheduled_dep
+                    actual_arr = actual_dep + estimated_duration
+                else:
+                    actual_arr = actual_dep + timedelta(hours=2)  # Default 2 hours
         
         # 1. Scheduled
         events.append({
@@ -129,8 +166,7 @@ class MockDataGenerator:
             "payload": {"gate": gate}
         })
         
-        # 5. Departure (slightly late to show detail)
-        actual_dep = scheduled_dep + timedelta(minutes=random.randint(-5, 10))
+        # 5. Departure events (use actual times from CSV if available)
         events.append({
             "event_type": "PUSHBACK",
             "timestamp": actual_dep,
@@ -144,6 +180,56 @@ class MockDataGenerator:
             "actor": "ATC_TOWER",
             "payload": {"runway": f"{random.randint(1,36)}L"}
         })
+        
+        # 6. In-flight events (if we have arrival data)
+        if actual_arr:
+            # Cruise
+            mid_point = actual_dep + (actual_arr - actual_dep) / 2
+            events.append({
+                "event_type": "CRUISE",
+                "timestamp": mid_point,
+                "actor": "FLIGHT_CONTROL",
+                "payload": {}
+            })
+            
+            # Descent
+            events.append({
+                "event_type": "DESCENT",
+                "timestamp": actual_arr - timedelta(minutes=30),
+                "actor": "FLIGHT_CONTROL",
+                "payload": {}
+            })
+            
+            # Approach
+            events.append({
+                "event_type": "APPROACH",
+                "timestamp": actual_arr - timedelta(minutes=15),
+                "actor": "ATC_TOWER",
+                "payload": {}
+            })
+            
+            # Landing
+            events.append({
+                "event_type": "LANDING",
+                "timestamp": actual_arr,
+                "actor": "ATC_TOWER",
+                "payload": {"runway": f"{random.randint(1,36)}R"}
+            })
+            
+            # Taxi and arrival
+            events.append({
+                "event_type": "TAXI_IN",
+                "timestamp": actual_arr + timedelta(minutes=5),
+                "actor": "PILOT",
+                "payload": {}
+            })
+            
+            events.append({
+                "event_type": "GATE_ARRIVAL",
+                "timestamp": actual_arr + timedelta(minutes=10),
+                "actor": "AIRPORT_OPS",
+                "payload": {"gate": gate}
+            })
         
         return events
 

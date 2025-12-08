@@ -28,14 +28,17 @@ class Settings(BaseSettings):
     contract_address: Optional[str] = None
     private_key: Optional[str] = None  # Account private key for signing transactions
     
-    # OpenSky Network API
+    # CSV Flight Data
+    csv_flights_path: Optional[str] = None  # Path to flights.csv file. If None, will search for it automatically.
+    
+    # OpenSky Network API (DEPRECATED - kept for backwards compatibility if needed)
     opensky_base_url: str = "https://opensky-network.org/api"
     opensky_auth_url: str = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
     opensky_username: Optional[str] = None
     opensky_password: Optional[str] = None
-    opensky_access_token: Optional[str] = None  # Bearer token for authentication (if you have a pre-obtained token)
-    opensky_client_id: Optional[str] = None  # OAuth 2.0 client ID (preferred method)
-    opensky_client_secret: Optional[str] = None  # OAuth 2.0 client secret (preferred method)
+    opensky_access_token: Optional[str] = None
+    opensky_client_id: Optional[str] = None
+    opensky_client_secret: Optional[str] = None
     opensky_timeout: int = 30
     
     # CORS
