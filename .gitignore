@@ -90,6 +90,10 @@ yarn.lock.backup
 coverage/
 .nyc_output/
 
+# Documentation (keep only README.md)
+*.md
+!README.md
+
 # Misc
 *.bak
 *.swp
