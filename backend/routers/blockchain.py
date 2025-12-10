@@ -180,7 +180,48 @@ async def prepare_transaction(
             status_code=500,
             detail=f"Failed to prepare transaction: {error_detail}"
         )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to prepare transaction: {error_detail}"
+        )
 
+
+class BatchTransactionRequest(BaseModel):
+    event_ids: list[int]
+
+
+@router.post(
+    "/blockchain/prepare-batch-transaction",
+    response_model=PreparedTransaction,
+    summary="Prepare batch transaction",
+    description="Prepare a single transaction to record multiple events."
+)
+async def prepare_batch_transaction(
+    request: BatchTransactionRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Prepare a batch transaction.
+    """
+    from models.event import FlightEvent
+    from config import settings
+    
+    # Check checks...
+    if not settings.contract_address:
+         raise HTTPException(status_code=500, detail="Contract address not configured")
+         
+    blockchain_service = BlockchainService(db)
+    
+    if not blockchain_service.is_connected():
+        raise HTTPException(status_code=500, detail="Cannot connect to blockchain")
+        
+    try:
+        transaction = await blockchain_service.prepare_batch_transaction(request.event_ids)
+        if not transaction:
+             raise HTTPException(status_code=500, detail="Failed to prepare transaction")
+        return transaction
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get(
     "/blockchain/flight-events/{flight_number}",

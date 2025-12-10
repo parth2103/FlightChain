@@ -24,8 +24,8 @@ class Settings(BaseSettings):
     db_max_overflow: int = 10
     
     # Blockchain
-    ganache_url: str = "http://127.0.0.1:7545"  # Default Ganache GUI port
-    contract_address: Optional[str] = None
+    ganache_url: str = "http://127.0.0.1:8545"  # Default Ganache CLI port
+    contract_address: Optional[str] = "0xCfEB869F69431e42cdB54A4F4f105C19C080A601"
     private_key: Optional[str] = None  # Account private key for signing transactions
     
     # CSV Flight Data

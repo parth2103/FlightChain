@@ -12,6 +12,33 @@
 
 FlightChain is a full-stack web application that provides transparent, verifiable flight event data. It leverages Ethereum smart contracts to immutably record flight events, ensuring data integrity for passengers, insurers, and aviation stakeholders. The system integrates blockchain technology with flight tracking to create an immutable audit trail of flight events.
 
+## Screenshots
+
+### Landing Page
+The clean, minimalist landing page with flight search functionality.
+
+![Landing Page](docs/images/landing_page.jpeg)
+
+### Flight Overview
+Detailed flight information including route, times, aircraft details, and delay analysis.
+
+![Flight Overview](docs/images/flight_overview.jpeg)
+
+### Event Timeline
+Chronological timeline of all flight events with blockchain verification status.
+
+![Event Timeline](docs/images/event_timeline.jpeg)
+
+### Blockchain Log
+Complete list of all flight events recorded on the blockchain with transaction hashes and block numbers.
+
+![Blockchain Log](docs/images/blockchain_logs.jpeg)
+
+### Historical Baseline
+Route performance statistics showing on-time performance, average delays, and total flights tracked.
+
+![Historical Baseline](docs/images/historical_baseline.jpeg)
+
 ## What We Built
 
 ### Core Features

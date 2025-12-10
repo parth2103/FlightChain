@@ -14,13 +14,17 @@ export default function AircraftMetadata({ aircraft }: Props) {
 
     return (
         <Card
-            title={<><RocketOutlined /> Aircraft Information</>}
-            size="small"
+            title={<><RocketOutlined style={{ fontSize: '20px', marginRight: 8 }} /> <span style={{ fontSize: '18px' }}>Aircraft Information</span></>}
+            bordered={false}
             style={{ marginBottom: 24, height: '100%' }}
         >
-            <Descriptions column={1} size="small">
+            <Descriptions
+                column={1}
+                labelStyle={{ fontSize: '16px', color: '#666' }}
+                contentStyle={{ fontSize: '16px', fontWeight: 500 }}
+            >
                 <Descriptions.Item label="Registration">
-                    <Tag>{aircraft.registration || 'N/A'}</Tag>
+                    <Tag style={{ fontSize: '14px', padding: '4px 10px' }}>{aircraft.registration || 'N/A'}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Type">
                     {aircraft.manufacturer} {aircraft.model}
@@ -30,7 +34,7 @@ export default function AircraftMetadata({ aircraft }: Props) {
                     {aircraft.age_years ? `${aircraft.age_years} years` : 'Unknown'}
                 </Descriptions.Item>
                 <Descriptions.Item label="ICAO24">
-                    <span style={{ fontFamily: 'monospace' }}>{aircraft.icao24}</span>
+                    <span style={{ fontFamily: 'monospace', background: '#f5f5f5', padding: '2px 6px', borderRadius: 4 }}>{aircraft.icao24}</span>
                 </Descriptions.Item>
             </Descriptions>
         </Card>

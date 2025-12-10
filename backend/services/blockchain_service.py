@@ -27,7 +27,11 @@ CONTRACT_ABI = [
      "outputs": [{"name": "flightId", "type": "string"}, {"name": "eventType", "type": "string"},
                  {"name": "timestamp", "type": "uint256"}, {"name": "actor", "type": "string"},
                  {"name": "dataHash", "type": "bytes32"}, {"name": "blockNumber", "type": "uint256"}],
-     "stateMutability": "view", "type": "function"}
+     "stateMutability": "view", "type": "function"},
+    {"inputs": [{"name": "_flightIds", "type": "string[]"}, {"name": "_eventTypes", "type": "string[]"},
+                {"name": "_timestamps", "type": "uint256[]"}, {"name": "_actors", "type": "string[]"},
+                {"name": "_dataHashes", "type": "bytes32[]"}],
+     "name": "recordEvents", "outputs": [{"type": "uint256"}], "stateMutability": "nonpayable", "type": "function"}
 ]
 
 class BlockchainService:
@@ -251,6 +255,77 @@ class BlockchainService:
             error_msg = f"Failed to prepare transaction: {str(e)}"
             print(error_msg)
             raise Exception(error_msg)
+
+    async def prepare_batch_transaction(self, event_ids: list[int]) -> Optional[dict]:
+        """
+        Prepare a batch transaction to record multiple events.
+        """
+        if not self.is_connected():
+            raise Exception(f"Web3 not connected to {settings.ganache_url}")
+            
+        if not self.contract:
+            raise Exception("Contract not initialized")
+        
+        events = self.db.query(FlightEvent).filter(FlightEvent.id.in_(event_ids)).all()
+        if len(events) != len(event_ids):
+            # Check if we found all events. It's possible some IDs are invalid.
+            # But let's verify which ones we found.
+            found_ids = [e.id for e in events]
+            missing = set(event_ids) - set(found_ids)
+            if missing:
+                raise Exception(f"Events not found: {missing}")
+            
+        # Ensure consistent order (e.g. by ID)
+        events.sort(key=lambda x: x.id)
+        
+        flight_ids = []
+        event_types = []
+        timestamps = []
+        actors = []
+        data_hashes = []
+        
+        for event in events:
+            if not event.data_hash:
+                continue
+                
+            data_hash_str = event.data_hash[2:] if event.data_hash.startswith("0x") else event.data_hash
+            if len(data_hash_str) != 64:
+                raise Exception(f"Invalid hash for event {event.id}")
+                
+            flight_ids.append(event.flight.flight_number)
+            event_types.append(event.event_type)
+            timestamps.append(int(event.timestamp.timestamp()))
+            actors.append(event.actor or "SYSTEM")
+            data_hashes.append(bytes.fromhex(data_hash_str))
+            
+        if not flight_ids:
+            return None
+            
+        account = self.web3.eth.accounts[0]
+        
+        try:
+            built_tx = self.contract.functions.recordEvents(
+                flight_ids,
+                event_types,
+                timestamps,
+                actors,
+                data_hashes
+            ).build_transaction({
+                "from": account,
+                "gas": 300000 * len(flight_ids), # Rough estimate
+                "gasPrice": self.web3.eth.gas_price,
+                "nonce": self.web3.eth.get_transaction_count(account)
+            })
+            
+            return {
+                "to": settings.contract_address,
+                "data": built_tx["data"],
+                "value": "0x0",
+                "gas": hex(int(built_tx["gas"] * 1.2)),
+                "gasPrice": hex(self.web3.eth.gas_price)
+            }
+        except Exception as e:
+            raise Exception(f"Smart contract error: {e}")
 
     async def read_flight_events_from_chain(self, flight_number: str) -> list[dict]:
         """

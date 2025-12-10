@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Input, Button, Typography, Card, Space, Row, Col, message, Modal } from 'antd';
+import { Input, Button, Typography, Card, Space, Row, Col, message, Modal, Tag } from 'antd';
 import { SearchOutlined, SafetyCertificateOutlined, RocketOutlined, WalletOutlined } from '@ant-design/icons';
 import { traceFlight, getContractAddress, fetchFlightData, getFlightEventsFromChain, prepareTransaction, confirmTransaction } from '@/services/api';
 import api from '@/services/api';
@@ -20,7 +20,30 @@ export default function Home() {
     const [logs, setLogs] = useState<any[]>([]);
     const [metamaskModalVisible, setMetamaskModalVisible] = useState(false);
     const [pendingTransactions, setPendingTransactions] = useState<any[]>([]);
+    const [recentSearches, setRecentSearches] = useState<string[]>([]);
     const router = useRouter();
+
+    useEffect(() => {
+        const saved = localStorage.getItem('recentSearches');
+        if (saved) {
+            try {
+                setRecentSearches(JSON.parse(saved));
+            } catch (e) {
+                console.error('Failed to parse recent searches', e);
+            }
+        }
+    }, []);
+
+    const addToHistory = (flight: string) => {
+        const normalized = flight.toUpperCase().trim();
+        if (!normalized) return;
+
+        setRecentSearches(prev => {
+            const newState = [normalized, ...prev.filter(f => f !== normalized)].slice(0, 5);
+            localStorage.setItem('recentSearches', JSON.stringify(newState));
+            return newState;
+        });
+    };
 
     const addLog = (type: string, msg: string) => {
         setLogs(prev => [...prev, { type, message: msg }]);
@@ -28,6 +51,9 @@ export default function Home() {
 
     const handleSearch = async () => {
         if (!flightNumber.trim()) return;
+
+        addToHistory(flightNumber);
+
         setLoading(true);
         setConsoleVisible(true);
         setLogs([]);
@@ -41,7 +67,7 @@ export default function Home() {
             }
 
             addLog('info', `Connecting to MetaMask...`);
-            
+
             // 2. Connect to MetaMask
             try {
                 await connectMetaMask();
@@ -73,7 +99,7 @@ export default function Home() {
                         reject(new Error('Blockchain query timeout - skipping'));
                     }, 3000);
                 });
-                
+
                 const chainEvents = await Promise.race([chainEventsPromise, timeoutPromise]);
                 if (chainEvents && chainEvents.length > 0) {
                     addLog('success', `Found ${chainEvents.length} events on blockchain`);
@@ -85,7 +111,7 @@ export default function Home() {
                 // Silently continue - blockchain check is optional
                 addLog('info', 'Blockchain check skipped, proceeding to fetch flight data...');
             }
-            
+
             // If we found events on blockchain, go to flight page
             if (hasBlockchainEvents) {
                 setTimeout(() => {
@@ -100,26 +126,26 @@ export default function Home() {
             try {
                 const traceLogs = await traceFlight(flightNumber.toUpperCase());
                 // Ensure all logs have the required structure
-                const validTraceLogs = Array.isArray(traceLogs) 
+                const validTraceLogs = Array.isArray(traceLogs)
                     ? traceLogs.filter((log: any) => log && log.type && log.message)
                     : [];
                 setLogs(prev => [...prev, ...validTraceLogs]);
 
                 // Check if traceFlight succeeded (created flight)
                 // Only fail if there's a critical error about flight creation, not blockchain connection errors
-                const criticalErrors = validTraceLogs.filter((log: any) => 
-                    log.type === 'error' && 
+                const criticalErrors = validTraceLogs.filter((log: any) =>
+                    log.type === 'error' &&
                     (log.message.includes('Oracle failed') || log.message.includes('failed to retrieve flight'))
                 );
-                
+
                 if (criticalErrors.length > 0) {
                     addLog('error', 'Failed to create flight. Please try again.');
                     setLoading(false);
                     return;
                 }
-                
+
                 // Blockchain connection errors are not critical - flight can still be created
-                const blockchainErrors = validTraceLogs.filter((log: any) => 
+                const blockchainErrors = validTraceLogs.filter((log: any) =>
                     log.type === 'error' && log.message.includes('contract')
                 );
                 if (blockchainErrors.length > 0) {
@@ -135,12 +161,12 @@ export default function Home() {
                 let flightData;
                 let fetchAttempts = 0;
                 const maxFetchAttempts = 8; // Increased attempts
-                
+
                 // Retry fetching until we get events or max attempts reached
                 while (fetchAttempts < maxFetchAttempts) {
                     try {
                         flightData = await fetchFlightData(flightNumber.toUpperCase(), 1);
-                        
+
                         // Check if we got events
                         if (flightData && flightData.events && flightData.events.length > 0) {
                             addLog('success', `Flight data retrieved with ${flightData.events.length} events`);
@@ -153,7 +179,7 @@ export default function Home() {
                                 eventsLength: flightData?.events?.length || 0,
                                 events: flightData?.events
                             });
-                            
+
                             if (fetchAttempts < maxFetchAttempts) {
                                 addLog('info', `Events not ready yet, retrying... (attempt ${fetchAttempts}/${maxFetchAttempts})`);
                                 await new Promise(resolve => setTimeout(resolve, 2000)); // Increased wait time
@@ -170,10 +196,10 @@ export default function Home() {
                             response: error.response?.data,
                             flightNumber: flightNumber.toUpperCase()
                         });
-                        
+
                         if (fetchAttempts >= maxFetchAttempts) {
                             addLog('error', `Failed to fetch flight data after ${maxFetchAttempts} attempts: ${errorMsg}`);
-                            
+
                             // Check if the search endpoint can find the flight
                             addLog('info', 'Attempting direct flight search...');
                             try {
@@ -221,15 +247,15 @@ export default function Home() {
                         }
                     }
                 }
-                
+
                 if (!flightData) {
                     addLog('error', 'Flight data not found. Please try again.');
                     setLoading(false);
                     return;
                 }
-                
+
                 addLog('info', 'Flight data retrieved successfully');
-                
+
                 // Debug: Log events structure
                 console.log('=== FLIGHT DATA DEBUG ===');
                 console.log('Flight data:', flightData);
@@ -237,10 +263,10 @@ export default function Home() {
                 console.log('Events length:', flightData.events?.length);
                 console.log('Events type:', typeof flightData.events);
                 console.log('Is array:', Array.isArray(flightData.events));
-                
+
                 if (flightData.events && flightData.events.length > 0) {
                     addLog('info', `Found ${flightData.events.length} total events`);
-                    
+
                     // Debug: Log event structure
                     flightData.events.forEach((e: any, idx: number) => {
                         console.log(`Event ${idx}:`, {
@@ -250,20 +276,20 @@ export default function Home() {
                             is_verified: e.blockchain?.is_verified
                         });
                     });
-                    
+
                     // Process events that need blockchain recording
                     const eventsNeedingTx = flightData.events.filter((e: any) => {
                         const isVerified = e.blockchain?.is_verified;
                         console.log(`Event ${e.id} (${e.event_type}): is_verified=${isVerified}`);
                         return !isVerified;
                     });
-                    
+
                     addLog('info', `${eventsNeedingTx.length} events need blockchain recording (out of ${flightData.events.length} total)`);
-                    
+
                     if (eventsNeedingTx.length > 0) {
                         addLog('info', `Found ${eventsNeedingTx.length} events that need to be recorded on blockchain`);
                         addLog('warning', 'MetaMask will open to approve transactions. You will pay minimal gas fees.');
-                        
+
                         // Prepare transactions via backend API
                         addLog('info', 'Preparing transactions for MetaMask...');
                         const transactions = [];
@@ -279,7 +305,7 @@ export default function Home() {
                                 const errorMsg = error.response?.data?.detail || error.message;
                                 addLog('error', `✗ Failed to prepare transaction for ${event.event_type}: ${errorMsg}`);
                                 console.error('Transaction preparation error:', error);
-                                
+
                                 // If it's a connection error, provide helpful message
                                 if (errorMsg.includes('Cannot connect') || errorMsg.includes('Ganache')) {
                                     addLog('error', 'Make sure Ganache is running on port 7545');
@@ -289,24 +315,24 @@ export default function Home() {
                                 }
                             }
                         }
-                        
+
                         if (transactions.length > 0) {
                             addLog('success', `Successfully prepared ${transactions.length} transaction(s)`);
                             addLog('warning', '⚠️ IMPORTANT: A modal will appear! Click "Approve & Send" in the modal to open MetaMask!');
-                            
+
                             console.log('=== OPENING METAMASK MODAL ===');
                             console.log('Transactions prepared:', transactions.length);
                             console.log('Setting pending transactions:', transactions);
-                            
+
                             // CRITICAL: Set state synchronously and ensure modal shows IMMEDIATELY on home page
                             setPendingTransactions(transactions);
                             setLoading(false); // Stop loading spinner
                             setMetamaskModalVisible(true); // Show modal immediately - no delay!
-                            
+
                             console.log('✅ Modal set to visible IMMEDIATELY on home page');
                             console.log('✅ Transactions ready:', transactions.length);
                             console.log('✅ Modal should be visible NOW - no navigation yet');
-                            
+
                             // Return here to prevent navigation - modal will handle navigation after user action
                             return;
                         } else {
@@ -335,7 +361,7 @@ export default function Home() {
                     console.log('Flight data:', flightData);
                     console.log('Events array:', flightData.events);
                     console.log('Flight ID:', flightData?.id);
-                    
+
                     // Try to fetch events directly if we have a flight ID
                     if (flightData && flightData.id) {
                         addLog('info', `Attempting to fetch events directly for flight ID ${flightData.id}...`);
@@ -344,15 +370,15 @@ export default function Home() {
                             if (eventsRes.data && eventsRes.data.length > 0) {
                                 addLog('success', `Found ${eventsRes.data.length} events via direct API call`);
                                 flightData.events = eventsRes.data;
-                                
+
                                 // Now process events - same logic as above
                                 const eventsNeedingTxDirect = flightData.events.filter((e: any) => !e.blockchain?.is_verified);
                                 addLog('info', `${eventsNeedingTxDirect.length} events need blockchain recording (out of ${flightData.events.length} total)`);
-                                
+
                                 if (eventsNeedingTxDirect.length > 0) {
                                     addLog('info', `Found ${eventsNeedingTxDirect.length} events that need to be recorded on blockchain`);
                                     addLog('warning', 'MetaMask will open to approve transactions. You will pay minimal gas fees.');
-                                    
+
                                     // Prepare transactions via backend API
                                     addLog('info', 'Preparing transactions for MetaMask...');
                                     const transactions = [];
@@ -370,21 +396,21 @@ export default function Home() {
                                             console.error('Transaction preparation error:', error);
                                         }
                                     }
-                                    
+
                                     if (transactions.length > 0) {
                                         addLog('success', `Successfully prepared ${transactions.length} transaction(s)`);
                                         addLog('warning', '⚠️ IMPORTANT: A modal will appear! Click "Approve & Send" in the modal to open MetaMask!');
-                                        
+
                                         console.log('=== OPENING METAMASK MODAL (DIRECT FETCH) ===');
-                                        
+
                                         setPendingTransactions(transactions);
                                         setLoading(false); // Stop loading spinner
                                         setMetamaskModalVisible(true); // Show modal immediately - no delay!
-                                        
+
                                         console.log('✅ Modal set to visible IMMEDIATELY on home page (direct fetch path)');
                                         console.log('✅ Transactions ready:', transactions.length);
                                         console.log('✅ Modal should be visible NOW - no navigation yet');
-                                        
+
                                         // Return here to prevent navigation - modal will handle navigation after user action
                                         return;
                                     }
@@ -441,59 +467,103 @@ export default function Home() {
             addLog('error', 'No pending transactions to approve');
             return;
         }
-        
+
         addLog('info', `Starting MetaMask transaction flow for ${pendingTransactions.length} transaction(s)...`);
         console.log('handleApproveTransactions called with', pendingTransactions.length, 'transactions');
-        
+
         // Keep modal open during processing to show progress
         // setMetamaskModalVisible(false); // Don't close yet
-        
-        for (let i = 0; i < pendingTransactions.length; i++) {
-            const { event, transaction } = pendingTransactions[i];
-            try {
-                addLog('info', `⏳ Opening MetaMask for transaction ${i + 1}/${pendingTransactions.length} (${event.event_type})...`);
-                console.log('Sending transaction', i + 1, 'via MetaMask');
-                
-                // This should trigger MetaMask to open
-                const receipt = await sendPreparedTransaction(transaction);
-                
+
+        try {
+            if (pendingTransactions.length > 1) {
+                // BATCH MODE
+                addLog('info', '🚀 Optimizing: Preparing single batch transaction for all events...');
+
+                // 1. Prepare batch transaction
+                const eventIds = pendingTransactions.map(tx => tx.event.id);
+                const batchRes = await api.post('/blockchain/prepare-batch-transaction', { event_ids: eventIds });
+                const batchTx = batchRes.data;
+
+                addLog('success', '✓ Batch transaction prepared. Opening MetaMask...');
+                console.log('Batch TX:', batchTx);
+
+                // 2. Send SINGLE transaction
+                const receipt = await sendPreparedTransaction(batchTx);
+
                 if (!receipt) {
                     addLog('error', 'Transaction receipt is null - transaction may have failed');
-                    continue;
+                    return;
                 }
-                
-                addLog('success', `✅ Transaction ${i + 1} confirmed! Block ${receipt.blockNumber}, Hash ${receipt.hash.slice(0, 10)}...`);
-                console.log('Transaction confirmed:', receipt.hash);
-                
-                // Confirm transaction in backend
-                try {
-                    await confirmTransaction(event.id, receipt.hash, Number(receipt.blockNumber));
-                    addLog('info', `✓ Transaction recorded in database`);
-                } catch (confirmError: any) {
-                    addLog('warning', `⚠ Transaction confirmed on blockchain but failed to update database: ${confirmError.message}`);
+
+                addLog('success', `✅ Batch transaction confirmed! Block ${receipt.blockNumber}, Hash ${receipt.hash.slice(0, 10)}...`);
+
+                // 3. Confirm all events in backend
+                addLog('info', 'Updating database records...');
+                for (const tx of pendingTransactions) {
+                    try {
+                        await confirmTransaction(tx.event.id, receipt.hash, Number(receipt.blockNumber));
+                        console.log(`Confirmed event ${tx.event.id}`);
+                    } catch (confirmError: any) {
+                        console.error(`Failed to confirm event ${tx.event.id}:`, confirmError);
+                    }
                 }
-            } catch (error: any) {
-                console.error('Transaction error:', error);
-                if (error.code === 4001) {
-                    addLog('error', '❌ Transaction rejected by user in MetaMask');
-                    message.error('Transaction was rejected. Please try again.');
-                    break;
-                } else if (error.message?.includes('MetaMask')) {
-                    addLog('error', `❌ MetaMask error: ${error.message}`);
-                    message.error(`MetaMask error: ${error.message}`);
-                } else {
-                    addLog('error', `❌ Transaction failed: ${error.message || JSON.stringify(error)}`);
-                    message.error(`Transaction failed: ${error.message || 'Unknown error'}`);
+                addLog('success', '✓ All events successfully recorded in database');
+
+            } else {
+                // SINGLE MODE (Legacy loop)
+                for (let i = 0; i < pendingTransactions.length; i++) {
+                    const { event, transaction } = pendingTransactions[i];
+                    try {
+                        addLog('info', `⏳ Opening MetaMask for transaction ${i + 1}/${pendingTransactions.length} (${event.event_type})...`);
+                        console.log('Sending transaction', i + 1, 'via MetaMask');
+
+                        // This should trigger MetaMask to open
+                        const receipt = await sendPreparedTransaction(transaction);
+
+                        if (!receipt) {
+                            addLog('error', 'Transaction receipt is null - transaction may have failed');
+                            continue;
+                        }
+
+                        addLog('success', `✅ Transaction ${i + 1} confirmed! Block ${receipt.blockNumber}, Hash ${receipt.hash.slice(0, 10)}...`);
+                        console.log('Transaction confirmed:', receipt.hash);
+
+                        // Confirm transaction in backend
+                        try {
+                            await confirmTransaction(event.id, receipt.hash, Number(receipt.blockNumber));
+                            addLog('info', `✓ Transaction recorded in database`);
+                        } catch (confirmError: any) {
+                            addLog('warning', `⚠ Transaction confirmed on blockchain but failed to update database: ${confirmError.message}`);
+                        }
+                    } catch (error: any) {
+                        console.error('Transaction error:', error);
+                        if (error.code === 4001) {
+                            addLog('error', '❌ Transaction rejected by user in MetaMask');
+                            message.error('Transaction was rejected. Please try again.');
+                            break;
+                        } else if (error.message?.includes('MetaMask')) {
+                            addLog('error', `❌ MetaMask error: ${error.message}`);
+                            message.error(`MetaMask error: ${error.message}`);
+                        } else {
+                            addLog('error', `❌ Transaction failed: ${error.message || JSON.stringify(error)}`);
+                            message.error(`Transaction failed: ${error.message || 'Unknown error'}`);
+                        }
+                    }
                 }
             }
+        } catch (error: any) {
+            console.error('Batch flow error:', error);
+            addLog('error', `❌ Error processing transactions: ${error.message}`);
+            message.error(`Error: ${error.message}`);
+            return;
         }
-        
+
         // Close modal after all transactions
         setMetamaskModalVisible(false);
-        
+
         addLog('success', 'All transactions processed successfully!');
         addLog('info', 'Navigating to flight details page...');
-        
+
         // Navigate directly to flight page - it will reload data and show updated verification status
         // Don't wait for blockchain reads as they may timeout
         setLoading(false);
@@ -507,7 +577,7 @@ export default function Home() {
         // Don't navigate automatically - wait for user action on modal
         if (!metamaskModalVisible && !loading && flightNumber) {
             // Only auto-navigate if no transactions pending
-        router.push(`/flight/${flightNumber.toUpperCase()}`);
+            router.push(`/flight/${flightNumber.toUpperCase()}`);
         }
     };
 
@@ -537,11 +607,11 @@ export default function Home() {
             }}>
                 <WorldMap dots={[]} lineColor="#1890ff" />
             </div>
-            
+
             {/* Content Layer */}
-            <div style={{ 
-                maxWidth: 800, 
-                width: '100%', 
+            <div style={{
+                maxWidth: 800,
+                width: '100%',
                 textAlign: 'center',
                 position: 'relative',
                 zIndex: 1
@@ -612,6 +682,37 @@ export default function Home() {
                                     Search
                                 </Button>
                             </Space.Compact>
+
+                            {/* Recent Searches */}
+                            {recentSearches.length > 0 && (
+                                <div style={{ marginTop: 16, textAlign: 'left' }}>
+                                    <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>Recent:</Text>
+                                    <Space wrap size={[8, 8]}>
+                                        {recentSearches.map((search, index) => (
+                                            <Tag
+                                                key={index}
+                                                style={{
+                                                    cursor: 'pointer',
+                                                    borderRadius: 12,
+                                                    border: '1px solid #d9d9d9',
+                                                    padding: '2px 10px',
+                                                    marginRight: 0
+                                                }}
+                                                onClick={() => {
+                                                    setFlightNumber(search);
+                                                    // Optional: auto-trigger search?
+                                                    // For better UX, let's just populate. User can click search.
+                                                    // Actually, usually tagging a recent search triggers it.
+                                                    // Let's populate and maybe trigger if we can refactor handleSearch to take an arg.
+                                                    // For now, simpler to just set state.
+                                                }}
+                                            >
+                                                {search}
+                                            </Tag>
+                                        ))}
+                                    </Space>
+                                </div>
+                            )}
                         </Card>
                     )}
 
@@ -676,10 +777,10 @@ export default function Home() {
                 </div>
                 <div style={{ marginBottom: 16, padding: 12, background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
                     <Text type="secondary">
-                        <strong>What happens next:</strong><br/>
-                        1. Click "Approve & Send" button below<br/>
-                        2. MetaMask window will open automatically<br/>
-                        3. Approve each transaction in MetaMask ({pendingTransactions.length} total)<br/>
+                        <strong>What happens next:</strong><br />
+                        1. Click "Approve & Send" button below<br />
+                        2. MetaMask window will open automatically<br />
+                        3. Approve each transaction in MetaMask ({pendingTransactions.length} total)<br />
                         4. Gas fees are minimal (free on Ganache testnet)
                     </Text>
                 </div>

@@ -17,7 +17,7 @@ export default function DelaySummary({ delayAnalysis }: Props) {
     // Determine overall status and color
     const depDelay = delayAnalysis.departure_delay_minutes ?? null;
     const arrDelay = delayAnalysis.arrival_delay_minutes ?? null;
-    
+
     // Check if delayed, early, or on-time
     const isDelayed = (depDelay !== null && depDelay > 0) || (arrDelay !== null && arrDelay > 0);
     const isEarly = (depDelay !== null && depDelay < 0) || (arrDelay !== null && arrDelay < 0);
@@ -55,6 +55,7 @@ export default function DelaySummary({ delayAnalysis }: Props) {
         <Card
             title="Delay Analysis"
             size="small"
+            bordered={false}
             style={getCardStyle()}
         >
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
@@ -63,8 +64,8 @@ export default function DelaySummary({ delayAnalysis }: Props) {
                 </Text>
                 <div style={{ marginTop: 4 }}>
                     <Text type="secondary">
-                        {isDelayed ? delayAnalysis.category + ' DELAY' : 
-                         isEarly ? 'EARLY' : 'NONE DELAY'}
+                        {isDelayed ? delayAnalysis.category + ' DELAY' :
+                            isEarly ? 'EARLY' : 'NONE DELAY'}
                     </Text>
                 </div>
             </div>
@@ -73,7 +74,7 @@ export default function DelaySummary({ delayAnalysis }: Props) {
             <Descriptions column={1} size="small" style={{ marginBottom: 16 }}>
                 {depDelay !== null && (
                     <Descriptions.Item label="Departure Delay">
-                        <Text style={{ 
+                        <Text style={{
                             color: depDelay > 0 ? '#f5222d' : depDelay < 0 ? '#52c41a' : undefined,
                             fontWeight: 'bold'
                         }}>
@@ -83,7 +84,7 @@ export default function DelaySummary({ delayAnalysis }: Props) {
                 )}
                 {arrDelay !== null && (
                     <Descriptions.Item label="Arrival Delay">
-                        <Text style={{ 
+                        <Text style={{
                             color: arrDelay > 0 ? '#f5222d' : arrDelay < 0 ? '#52c41a' : undefined,
                             fontWeight: 'bold'
                         }}>

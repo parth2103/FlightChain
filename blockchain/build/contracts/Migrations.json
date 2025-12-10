@@ -1160,7 +1160,7 @@
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2025-12-07T20:20:53.651Z",
+  "updatedAt": "2025-12-10T18:43:35.245Z",
   "networkType": "ethereum",
   "devdoc": {
     "details": "Standard Truffle migrations contract",

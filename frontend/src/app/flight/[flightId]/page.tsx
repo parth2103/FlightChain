@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { Tabs, Card, Spin, Result, Row, Col, Button, Modal, message, Space, Typography } from 'antd';
 
-const { Text } = Typography;
-import { useParams } from 'next/navigation';
+const { Text, Title } = Typography;
+import { useParams, useSearchParams } from 'next/navigation';
 import { RocketOutlined, BlockOutlined, LineChartOutlined, WalletOutlined } from '@ant-design/icons';
 
 import FlightSummary from '@/components/FlightSummary';
@@ -20,6 +20,8 @@ import { Flight } from '@/types';
 
 export default function FlightPage() {
     const { flightId } = useParams();
+    const searchParams = useSearchParams();
+    const view = searchParams.get('view');
     const [flight, setFlight] = useState<Flight | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -37,13 +39,13 @@ export default function FlightPage() {
         try {
             setLoading(true);
             setError(null);
-            
+
             console.log('Loading flight data for:', id);
-            
+
             // fetchFlightData handles both flight numbers and IDs
             // It first searches by flight number, then uses the returned flight ID
             const data = await fetchFlightData(id);
-            
+
             if (data) {
                 console.log('Flight data loaded:', data.id, data.flight_number);
                 setFlight(data);
@@ -54,7 +56,7 @@ export default function FlightPage() {
             console.error('Error loading flight data:', err);
             const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message || 'Failed to load flight data';
             setError(errorMsg);
-            
+
             // If it's a 404 or "not found", show helpful message
             if (err.response?.status === 404 || errorMsg.toLowerCase().includes('not found')) {
                 setError(`Flight "${id}" not found. The flight may not exist in the database yet.`);
@@ -85,7 +87,7 @@ export default function FlightPage() {
 
         // Find events that need to be recorded
         const eventsNeedingTx = flight.events.filter((e: any) => !e.blockchain?.is_verified);
-        
+
         if (eventsNeedingTx.length === 0) {
             message.success('All events are already recorded on blockchain');
             return;
@@ -148,7 +150,7 @@ export default function FlightPage() {
 
         setMetamaskModalVisible(false);
         setRecording(true);
-        
+
         // Important: MetaMask doesn't auto-open popups due to browser security
         // Show a notification to the user
         message.warning({
@@ -161,17 +163,17 @@ export default function FlightPage() {
             const { event, transaction } = pendingTransactions[i];
             try {
                 message.info(`⏳ Waiting for MetaMask approval for transaction ${i + 1}/${pendingTransactions.length}...`);
-                
+
                 // Small delay to ensure MetaMask is ready
                 await new Promise(resolve => setTimeout(resolve, 500));
-                
+
                 const receipt = await sendPreparedTransaction(transaction);
-                
+
                 if (!receipt) {
                     message.error(`Transaction ${i + 1} failed: Receipt is null`);
                     continue;
                 }
-                
+
                 // Confirm transaction in backend
                 await confirmTransaction(event.id, receipt.hash, Number(receipt.blockNumber));
                 successCount++;
@@ -233,51 +235,74 @@ export default function FlightPage() {
     ];
 
     return (
-        <div className="flight-page">
+        <div className="flight-page" style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
             <FlightSummary flight={flight} />
 
-            <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
-                <Col xs={24} md={12}>
-                    <AircraftMetadata aircraft={flight.aircraft} />
-                </Col>
-                <Col xs={24} md={12}>
-                    <DelaySummary delayAnalysis={flight.delayAnalysis} />
-                </Col>
-            </Row>
 
-            <Card style={{ borderRadius: 8 }}>
-                <Tabs defaultActiveKey="1" items={items} />
-            </Card>
+            {/* Content Switcher based on URL view param */}
+            {!view && (
+                <>
+                    <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+                        <Col xs={24} md={12}>
+                            <AircraftMetadata aircraft={flight.aircraft} />
+                        </Col>
+                        <Col xs={24} md={12}>
+                            <DelaySummary delayAnalysis={flight.delayAnalysis} />
+                        </Col>
+                    </Row>
 
-            {/* Record on Blockchain Button */}
-            {flight.events && flight.events.length > 0 && 
-             (!flight.blockchainEvents || flight.blockchainEvents.length === 0) && (
-                <Card style={{ marginTop: 24, textAlign: 'center' }}>
-                    <Space direction="vertical" size="middle">
-                        <div>
-                            <p style={{ marginBottom: 8 }}>
-                                <strong>{flight.events.filter((e: any) => !e.blockchain?.is_verified).length}</strong> event(s) ready to be recorded on blockchain
-                            </p>
-                            <p style={{ color: '#666', fontSize: 12 }}>
-                                Record flight events immutably on the Ethereum blockchain via MetaMask
-                            </p>
-                        </div>
-                        <Button
-                            type="primary"
-                            size="large"
-                            icon={<WalletOutlined />}
-                            loading={recording}
-                            onClick={handleRecordOnBlockchain}
-                        >
-                            Record Events on Blockchain
-                        </Button>
-                    </Space>
+                    {/* Record on Blockchain Button - Show only on main view */}
+                    {flight.events && flight.events.length > 0 &&
+                        (!flight.blockchainEvents || flight.blockchainEvents.length === 0) && (
+                            <Card bordered={false} style={{ marginTop: 24, textAlign: 'center', background: 'linear-gradient(135deg, #e6f7ff 0%, #ffffff 100%)' }}>
+                                <Space direction="vertical" size="middle">
+                                    <div>
+                                        <Title level={4} style={{ margin: 0, color: '#1890ff' }}>Blockchain Verification</Title>
+                                        <p style={{ marginTop: 8, marginBottom: 8, fontSize: 16 }}>
+                                            <strong>{flight.events.filter((e: any) => !e.blockchain?.is_verified).length}</strong> event(s) ready to be recorded on blockchain
+                                        </p>
+                                        <p style={{ color: '#666', fontSize: 14 }}>
+                                            Record flight events immutably on the Ethereum blockchain via MetaMask
+                                        </p>
+                                    </div>
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        icon={<WalletOutlined />}
+                                        loading={recording}
+                                        onClick={handleRecordOnBlockchain}
+                                        style={{ height: 48, paddingLeft: 32, paddingRight: 32, fontSize: 16 }}
+                                    >
+                                        Record Events on Blockchain
+                                    </Button>
+                                </Space>
+                            </Card>
+                        )}
+                </>
+            )}
+
+            {view === 'timeline' && (
+                <Card title={<Space><RocketOutlined /> Event Timeline</Space>} bordered={false}>
+                    <EventTimeline events={flight.events} />
                 </Card>
             )}
 
-            <div style={{ marginTop: 24, textAlign: 'center', color: '#999', fontSize: 12 }}>
-                Blockchain Contract: <span style={{ fontFamily: 'monospace' }}>{flight.blockchainEvents?.[0]?.contract_address || 'Not recorded'}</span>
-            </div>
+            {view === 'blockchain' && (
+                <Card title={<Space><BlockOutlined /> Blockchain Log</Space>} bordered={false}>
+                    <BlockchainLog events={flight.blockchainEvents} />
+                    <div style={{ marginTop: 32, textAlign: 'center', color: '#bfbfbf', fontSize: 12 }}>
+                        Blockchain Contract: <span style={{ fontFamily: 'monospace', background: '#f0f0f0', padding: '2px 6px', borderRadius: 4 }}>{flight.blockchainEvents?.[0]?.contract_address || 'Not recorded'}</span>
+                    </div>
+                </Card>
+            )}
+
+            {view === 'baseline' && (
+                <Card title={<Space><LineChartOutlined /> Historical Baseline</Space>} bordered={false}>
+                    <HistoricalBaselineView flight={flight} />
+                </Card>
+            )}
+
+
 
             <Modal
                 title={
@@ -306,16 +331,16 @@ export default function FlightPage() {
                 </div>
                 <div style={{ marginBottom: 16, padding: 12, background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4 }}>
                     <Text type="warning">
-                        <strong>Note:</strong> MetaMask may not auto-open due to browser popup blockers.<br/>
+                        <strong>Note:</strong> MetaMask may not auto-open due to browser popup blockers.<br />
                         If MetaMask doesn't open automatically, click the MetaMask extension icon in your browser toolbar.
                     </Text>
                 </div>
                 <div style={{ marginBottom: 16, padding: 12, background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
                     <Text type="secondary">
-                        <strong>What happens next:</strong><br/>
-                        1. Click "Approve & Send" button below<br/>
-                        2. Check MetaMask (it should open automatically, but may require clicking the extension icon)<br/>
-                        3. Approve each transaction in MetaMask ({pendingTransactions.length} total)<br/>
+                        <strong>What happens next:</strong><br />
+                        1. Click "Approve & Send" button below<br />
+                        2. Check MetaMask (it should open automatically, but may require clicking the extension icon)<br />
+                        3. Approve each transaction in MetaMask ({pendingTransactions.length} total)<br />
                         4. Gas fees are minimal (free on Ganache testnet)
                     </Text>
                 </div>

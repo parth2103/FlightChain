@@ -31,9 +31,9 @@ export default function HistoricalBaselineView({ flight }: Props) {
                             value={baseline.on_time_percentage ?? 0}
                             precision={1}
                             suffix="%"
-                            valueStyle={{ 
-                                color: baseline.on_time_percentage !== null && baseline.on_time_percentage !== undefined 
-                                    ? getPerformanceColor(baseline.on_time_percentage) 
+                            valueStyle={{
+                                color: baseline.on_time_percentage !== null && baseline.on_time_percentage !== undefined
+                                    ? getPerformanceColor(baseline.on_time_percentage)
                                     : '#999'
                             }}
                         />
@@ -77,20 +77,22 @@ export default function HistoricalBaselineView({ flight }: Props) {
                 <Row gutter={24}>
                     <Col span={12}>
                         <div style={{ textAlign: 'center' }}>
-                            <Statistic 
-                                title="Avg Departure Delay" 
-                                value={baseline.avg_departure_delay ?? 'N/A'} 
+                            <Statistic
+                                title="Avg Departure Delay"
+                                value={baseline.avg_departure_delay ?? 'N/A'}
+                                precision={2}
                                 suffix={baseline.avg_departure_delay !== null && baseline.avg_departure_delay !== undefined ? "min" : ""}
                             />
                         </div>
                     </Col>
                     <Col span={12}>
                         <div style={{ textAlign: 'center' }}>
-                            <Statistic 
-                                title="Avg Arrival Delay" 
-                                value={baseline.avg_arrival_delay ?? baseline.avg_delay_minutes ?? 'N/A'} 
-                                suffix={(baseline.avg_arrival_delay !== null && baseline.avg_arrival_delay !== undefined) || 
-                                        (baseline.avg_delay_minutes !== null && baseline.avg_delay_minutes !== undefined) ? "min" : ""}
+                            <Statistic
+                                title="Avg Arrival Delay"
+                                value={baseline.avg_arrival_delay ?? baseline.avg_delay_minutes ?? 'N/A'}
+                                precision={2}
+                                suffix={(baseline.avg_arrival_delay !== null && baseline.avg_arrival_delay !== undefined) ||
+                                    (baseline.avg_delay_minutes !== null && baseline.avg_delay_minutes !== undefined) ? "min" : ""}
                             />
                         </div>
                     </Col>
